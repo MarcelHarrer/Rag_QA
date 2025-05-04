@@ -5,10 +5,10 @@ import faiss
 from transformers import pipeline
 
 # Initialize global variables
-model = SentenceTransformer('all-mpnet-base-v2')  # More robust embedding model
+model = SentenceTransformer('all-mpnet-base-v2')  
 index = None
 documents = []
-qa_pipeline = pipeline("question-answering", model="deepset/roberta-base-squad2")  # Improved QA model
+qa_pipeline = pipeline("question-answering", model="deepset/roberta-base-squad2")
 
 def load_pdf(file_path):
     """Extract text from a PDF file."""
