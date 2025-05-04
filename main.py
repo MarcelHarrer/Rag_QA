@@ -3,6 +3,10 @@ import PyPDF2
 from sentence_transformers import SentenceTransformer
 import faiss
 from transformers import pipeline
+from fastapi import FastAPI, UploadFile, Form, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 # Initialize global variables
 model = SentenceTransformer('all-mpnet-base-v2')  
@@ -10,70 +14,69 @@ index = None
 documents = []
 qa_pipeline = pipeline("question-answering", model="deepset/roberta-base-squad2")
 
-def load_pdf(file_path):
-    """Extract text from a PDF file."""
+app = FastAPI()
+templates = Jinja2Templates(directory="c:/Rag_QA/templates")
+app.mount("/static", StaticFiles(directory="c:/Rag_QA/static"), name="static")
+
+def load_pdf_from_file(file: UploadFile):
+    """Extract text from an uploaded PDF file."""
     global documents
     try:
-        with open(file_path, 'rb') as file:
-            reader = PyPDF2.PdfReader(file)
-            text = ""
-            for page in reader.pages:
-                text += page.extract_text()
-            documents = text.split("\n")  # Split into chunks by lines
-            print(f"Loaded {len(documents)} lines from {file_path}.")
+        reader = PyPDF2.PdfReader(file.file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+        documents = text.split("\n")  # Split into chunks by lines
+        return {"message": f"Loaded {len(documents)} lines from the uploaded PDF."}
     except Exception as e:
-        print(f"Error loading PDF: {e}")
+        return {"error": f"Error loading PDF: {e}"}
 
-def build_index():
-    """Build a FAISS index from the loaded documents."""
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    """Render the home page."""
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.post("/upload-pdf/")
+async def upload_pdf(request: Request, files: list[UploadFile]):
+    """Handle multiple PDF uploads."""
+    global documents
+    all_messages = []
+    for file in files:
+        result = load_pdf_from_file(file)
+        if "message" in result:
+            all_messages.append(result["message"])
+        if "error" in result:
+            all_messages.append(result["error"])
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "message": " | ".join(all_messages)}
+    )
+
+@app.post("/build-index/")
+async def build_index(request: Request):
+    """Handle index building."""
     global index
     if not documents:
-        print("No documents loaded. Please load a PDF first.")
-        return
+        return templates.TemplateResponse("index.html", {"request": request, "error": "No documents loaded. Please upload a PDF first."})
     embeddings = model.encode(documents)
     index = faiss.IndexFlatL2(embeddings.shape[1])
     index.add(embeddings)
-    print("Index built successfully.")
+    return templates.TemplateResponse("index.html", {"request": request, "message": "Index built successfully."})
 
-def retrieve(query, top_k=5):
+def retrieve(query: str, top_k: int = 5):
     """Retrieve top-k relevant chunks for a query."""
     if index is None:
-        print("Index not built. Please build the index first.")
-        return []
+        return {"error": "Index not built. Please build the index first."}
     query_embedding = model.encode([query])
     distances, indices = index.search(query_embedding, top_k)
     return [documents[i] for i in indices[0]]
 
-def answer_question(query):
-    """Answer a question using the RAG approach."""
+@app.post("/ask-question/")
+async def ask_question(request: Request, query: str = Form(...)):
+    """Handle question answering."""
     relevant_chunks = retrieve(query)
-    if not relevant_chunks:
-        return "No relevant information found."
+    if isinstance(relevant_chunks, dict):  # Check for errors
+        return templates.TemplateResponse("index.html", {"request": request, "error": relevant_chunks["error"]})
     context = "\n".join(relevant_chunks)
     response = qa_pipeline(question=query, context=context)
-    return response['answer']
-
-def main():
-    while True:
-        print("\nOptions:")
-        print("1. Load PDF")
-        print("2. Build Index")
-        print("3. Ask a Question")
-        print("4. Exit")
-        choice = input("Enter your choice: ")
-        if choice == "1":
-            file_path = input("Enter the path to the PDF file: ")
-            load_pdf(file_path)
-        elif choice == "2":
-            build_index()
-        elif choice == "3":
-            query = input("Enter your question: ")
-            answer = answer_question(query)
-            print(f"Answer: {answer}")
-        elif choice == "4":
-            break
-        else:
-            print("Invalid choice. Please try again.")
-
-if __name__ == "__main__":
-    main()
+    return templates.TemplateResponse("index.html", {"request": request, "answer": response['answer']})
