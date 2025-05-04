@@ -7,28 +7,35 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <h1>RAG QA System</h1>
-    <form action="/upload-pdf/" method="post" enctype="multipart/form-data">
-        <label for="files">Upload PDFs:</label>
-        <input type="file" name="files" id="files" multiple required>
-        <button type="submit">Upload</button>
-    </form>
-    <form action="/build-index/" method="post">
-        <button type="submit">Build Index</button>
-    </form>
-    <form action="/ask-question/" method="post">
-        <label for="query">Ask a Question:</label>
-        <input type="text" name="query" id="query" required>
-        <button type="submit">Ask</button>
-    </form>
-    {% if message %}
-        <p class="message">{{ message }}</p>
-    {% endif %}
-    {% if error %}
-        <p class="error">{{ error }}</p>
-    {% endif %}
-    {% if answer %}
-        <p class="answer">Answer: {{ answer }}</p>
-    {% endif %}
+    <div class="container">
+        <h1>RAG QA System</h1>
+        <div class="upload-section">
+            <h2>Upload PDFs</h2>
+            <div id="drop-zone" class="drop-zone">
+                <p>Drag and drop your files here, or click to select files</p>
+                <input type="file" id="file-input" name="files" multiple hidden>
+            </div>
+            <ul id="file-list" class="file-list"></ul>
+            <button id="upload-button">Upload</button>
+        </div>
+        <form action="/build-index/" method="post">
+            <button type="submit">Build Index</button>
+        </form>
+        <form action="/ask-question/" method="post">
+            <label for="query">Ask a Question:</label>
+            <input type="text" name="query" id="query" required>
+            <button type="submit">Ask</button>
+        </form>
+        {% if message %}
+            <p class="message">{{ message }}</p>
+        {% endif %}
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        {% if answer %}
+            <p class="answer">Answer: {{ answer }}</p>
+        {% endif %}
+    </div>
+    <script src="/static/scripts.js"></script>
 </body>
 </html>
