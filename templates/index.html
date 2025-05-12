@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG QA Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+        }
+        main {
+            padding: 20px;
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            color: #4CAF50;
+        }
+        #drop-zone {
+            border: 2px dashed #4CAF50;
+            padding: 20px;
+            text-align: center;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        #drop-zone:hover {
+            background-color: #e8f5e9;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        p, ul {
+            margin: 10px 0;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>RAG QA Interface</h1>
+    </header>
+    <main>
+        <h2>Load a PDF</h2>
+        <div id="drop-zone">
+            Drag and drop a PDF file here or click to upload.
+            <input type="file" id="file-input" style="display: none;" accept=".pdf">
+        </div>
+        <p id="load-pdf-message"></p>
+
+        <h2>Build Index</h2>
+        <button id="build-index-button">Build Index</button>
+        <p id="build-index-message"></p>
+
+        <h2>Ask a Question</h2>
+        <input type="text" id="question" placeholder="Enter your question" required>
+        <button id="ask-question-button">Ask</button>
+        <p id="answer"></p>
+        <h3>Relevant Snippets:</h3>
+        <ul id="snippets"></ul>
+    </main>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const buildIndexButton = document.getElementById('build-index-button');
+        const askQuestionButton = document.getElementById('ask-question-button');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = 'blue';
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.style.borderColor = '#4CAF50';
+        });
+
+        dropZone.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            dropZone.style.borderColor = '#4CAF50';
+            const file = e.dataTransfer.files[0];
+            if (file) {
+                await uploadFile(file);
+            }
+        });
+
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (file) {
+                await uploadFile(file);
+            }
+        });
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('files', file);
+
+            const response = await fetch('/load_pdf', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            document.getElementById('load-pdf-message').innerText = data.message;
+        }
+
+        buildIndexButton.addEventListener('click', async () => {
+            const response = await fetch('/build_index', { method: 'POST' });
+            const data = await response.json();
+            document.getElementById('build-index-message').innerText = data.message;
+        });
+
+        askQuestionButton.addEventListener('click', async () => {
+            const question = document.getElementById('question').value;
+            const response = await fetch('/ask_question', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ query: question })
+            });
+            const data = await response.json();
+            document.getElementById('answer').innerText = `Answer: ${data.answer}`;
+            const snippetsList = document.getElementById('snippets');
+            snippetsList.innerHTML = '';
+            data.snippets.forEach(snippet => {
+                const li = document.createElement('li');
+                li.innerText = snippet;
+                snippetsList.appendChild(li);
+            });
+        });
+    </script>
+</body>
+</html>
