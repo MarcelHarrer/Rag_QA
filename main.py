@@ -42,7 +42,7 @@ def build_index():
     index.add(embeddings)
     return "Index built successfully."
 
-def retrieve(query, top_k=5):
+def retrieve(query: str, top_k: int = 5):
     """Retrieve top-k relevant chunks for a query."""
     if index is None:
         return []
