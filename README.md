@@ -12,7 +12,16 @@ This project implements a Retrieval-Augmented Generation (RAG) system for questi
 
 ## Demo
 
+<!-- 
+If your GIF is not playing fully, this is a limitation of some Markdown renderers (including GitHub's preview).
+Try clicking the GIF to view it in a new tab for the full animation.
+If you want to ensure the full GIF is visible, you can also provide a direct link:
+[View full demo GIF](example.gif)
+-->
+
 ![Example usage of the RAG QA System](example.gif)
+
+[View full demo GIF](example.gif)
 
 ## Requirements
 
